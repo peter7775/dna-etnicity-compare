@@ -49,58 +49,46 @@
 
 
 	func BayesianMethod(data []EthnicityResult) map[string]float64 {
-		// Group data by service
 		serviceData := make(map[string][]EthnicityResult)
 		for _, result := range data {
 			serviceData[result.Service] = append(serviceData[result.Service], result)
 		}
 	
-		// Initialize uniform priors
 		ethnicities := make(map[string]float64)
 		counts := make(map[string]int)
 		
-		// First pass: collect all ethnicities and count occurrences
 		for _, result := range data {
 			ethnicities[result.Ethnicity] = 0
 			counts[result.Ethnicity]++
 		}
 	
-		// Initialize with uniform priors
 		numEthnicities := float64(len(ethnicities))
 		for ethnicity := range ethnicities {
 			ethnicities[ethnicity] = 1.0 / numEthnicities
 		}
 	
-		// Process each service
 		for _, results := range serviceData {
-			// Get service rating
-			rating := results[0].Rating // All results for same service have same rating
+			rating := results[0].Rating 
 	
-			// Calculate service-specific probabilities
 			serviceProbabilities := make(map[string]float64)
 			totalPercentage := 0.0
 			
-			// First normalize percentages within service
 			for _, result := range results {
 				totalPercentage += result.Percentage
 			}
 	
-			// Calculate normalized probabilities for this service
 			for _, result := range results {
 				normalizedPercentage := result.Percentage / totalPercentage
 				serviceProbabilities[result.Ethnicity] = normalizedPercentage
 			}
 	
-			// Update beliefs using weighted averaging
 			for ethnicity := range ethnicities {
 				if serviceProb, exists := serviceProbabilities[ethnicity]; exists {
-					// Combine previous belief with new evidence, weighted by service rating
 					ethnicities[ethnicity] = ethnicities[ethnicity]*(1-rating) + serviceProb*rating
 				}
 			}
 		}
 	
-		// Final normalization to ensure sum is 100%
 		total := 0.0
 		for _, prob := range ethnicities {
 			total += prob
