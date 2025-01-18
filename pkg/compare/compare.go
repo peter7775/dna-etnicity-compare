@@ -3,7 +3,6 @@
 	import (
 	    "encoding/csv"
 	    "fmt"
-	    "math"
 	    "os"
 	    "strconv"
 	)
@@ -46,131 +45,72 @@
 	}
 
 
-	func CalculateBayesian(results []EthnicityResult) map[string]float64 {
-		ethnicities := make(map[string]bool)
-		services := make(map[string]bool)
-		for _, result := range results {
-			ethnicities[result.Ethnicity] = true
-			services[result.Service] = true
-		}
-	
-		priors := make(map[string]float64)
-		for ethnicity := range ethnicities {
-			priors[ethnicity] = 1.0 / float64(len(ethnicities))
-		}
-	
-		for service := range services {
-			likelihoods := make(map[string]float64)
-			totalLikelihood := 0.0
-			serviceRating := 0.0
-	
-			for _, result := range results {
-				if result.Service == service {
-					serviceRating = result.Rating
-					break
-				}
-			}
-	
-			for ethnicity := range ethnicities {
-				likelihood := 0.0
-				for _, result := range results {
-					if result.Service == service && result.Ethnicity == ethnicity {
-						likelihood = math.Log1p(result.Percentage) * serviceRating
-						break
-					}
-				}
-				if likelihood == 0 {
-					likelihood = 0.01 * serviceRating
-				}
-				likelihoods[ethnicity] = likelihood
-				totalLikelihood += likelihood
-			}
-	
-			for ethnicity := range likelihoods {
-				likelihoods[ethnicity] /= totalLikelihood
-			}
-	
-			posteriors := make(map[string]float64)
-			totalPosterior := 0.0
-			for ethnicity := range ethnicities {
-				posterior := likelihoods[ethnicity] * priors[ethnicity]
-				posteriors[ethnicity] = posterior
-				totalPosterior += posterior
-			}
-	
-			for ethnicity := range posteriors {
-				posteriors[ethnicity] /= totalPosterior
-				priors[ethnicity] = posteriors[ethnicity]
-			}
-		}
-	
-		return priors
-	}
 
 
 
 	func BayesianMethod(data []EthnicityResult) map[string]float64 {
-		ethnicities := make(map[string]bool)
-		services := make(map[string]bool)
+		// Group data by service
+		serviceData := make(map[string][]EthnicityResult)
 		for _, result := range data {
-			ethnicities[result.Ethnicity] = true
-			services[result.Service] = true
+			serviceData[result.Service] = append(serviceData[result.Service], result)
 		}
 	
-		priors := make(map[string]float64)
+		// Initialize uniform priors
+		ethnicities := make(map[string]float64)
+		counts := make(map[string]int)
+		
+		// First pass: collect all ethnicities and count occurrences
+		for _, result := range data {
+			ethnicities[result.Ethnicity] = 0
+			counts[result.Ethnicity]++
+		}
+	
+		// Initialize with uniform priors
+		numEthnicities := float64(len(ethnicities))
 		for ethnicity := range ethnicities {
-			priors[ethnicity] = 1.0 / float64(len(ethnicities))
+			ethnicities[ethnicity] = 1.0 / numEthnicities
 		}
 	
-		for service := range services {
-			likelihoods := make(map[string]float64)
-			totalLikelihood := 0.0
-			serviceRating := 0.0
+		// Process each service
+		for _, results := range serviceData {
+			// Get service rating
+			rating := results[0].Rating // All results for same service have same rating
 	
-			for _, result := range data {
-				if result.Service == service {
-					serviceRating = result.Rating
-					break
-				}
+			// Calculate service-specific probabilities
+			serviceProbabilities := make(map[string]float64)
+			totalPercentage := 0.0
+			
+			// First normalize percentages within service
+			for _, result := range results {
+				totalPercentage += result.Percentage
 			}
 	
+			// Calculate normalized probabilities for this service
+			for _, result := range results {
+				normalizedPercentage := result.Percentage / totalPercentage
+				serviceProbabilities[result.Ethnicity] = normalizedPercentage
+			}
+	
+			// Update beliefs using weighted averaging
 			for ethnicity := range ethnicities {
-				likelihood := 0.0
-				for _, result := range data {
-					if result.Service == service && result.Ethnicity == ethnicity {
-						// Use square root transformation instead of log
-						likelihood = math.Sqrt(result.Percentage) * serviceRating
-						break
-					}
+				if serviceProb, exists := serviceProbabilities[ethnicity]; exists {
+					// Combine previous belief with new evidence, weighted by service rating
+					ethnicities[ethnicity] = ethnicities[ethnicity]*(1-rating) + serviceProb*rating
 				}
-				if likelihood == 0 {
-					// Use a higher minimum likelihood
-					likelihood = 0.1 * serviceRating
-				}
-				likelihoods[ethnicity] = likelihood
-				totalLikelihood += likelihood
-			}
-	
-			for ethnicity := range likelihoods {
-				likelihoods[ethnicity] /= totalLikelihood
-			}
-	
-			posteriors := make(map[string]float64)
-			totalPosterior := 0.0
-			for ethnicity := range ethnicities {
-				// Apply service rating as weight
-				posterior := (likelihoods[ethnicity]*serviceRating + priors[ethnicity]) / (serviceRating + 1)
-				posteriors[ethnicity] = posterior
-				totalPosterior += posterior
-			}
-	
-			for ethnicity := range posteriors {
-				posteriors[ethnicity] /= totalPosterior
-				priors[ethnicity] = posteriors[ethnicity]
 			}
 		}
 	
-		return priors
+		// Final normalization to ensure sum is 100%
+		total := 0.0
+		for _, prob := range ethnicities {
+			total += prob
+		}
+		
+		for ethnicity := range ethnicities {
+			ethnicities[ethnicity] = (ethnicities[ethnicity] / total) 
+		}
+	
+		return ethnicities
 	}
 	
 
