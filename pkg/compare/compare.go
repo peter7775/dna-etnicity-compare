@@ -137,18 +137,18 @@
 	}
 
 	func DisplayResults(bayesianResults, averageResults, weightedAverageResults map[string]float64) {
-	    fmt.Println("\nVýsledky Bayesovské metody:")
-	    for ethnicity, probability := range bayesianResults {
+					fmt.Println("\nBayesian Method Results:")
+					for ethnicity, probability := range bayesianResults {
 	        fmt.Printf("%s: %.2f%%\n", ethnicity, probability*100)
 	    }
 
-	    fmt.Println("\nVýsledky průměrování:")
-	    for ethnicity, average := range averageResults {
+					fmt.Println("\nAverage Method Results:")
+					for ethnicity, average := range averageResults {
 	        fmt.Printf("%s: %.2f%%\n", ethnicity, average)
 	    }
 
-	    fmt.Println("\nVýsledky váženého průměrování:")
-	    for ethnicity, weightedAverage := range weightedAverageResults {
+					fmt.Println("\nWeighted Average Method Results:")
+					for ethnicity, weightedAverage := range weightedAverageResults {
 	        fmt.Printf("%s: %.2f%%\n", ethnicity, weightedAverage)
 	    }
 	}
