@@ -24,5 +24,9 @@ LivingDNA,ethnic_group_4,7,0.2
 ```
 ## usage
 ``go run main.go compare etnicity.csv``
-or use build
+
+or use build from folder ```build/``` like
+```./etcompare compare etnicity.csv ```
+
+
 
